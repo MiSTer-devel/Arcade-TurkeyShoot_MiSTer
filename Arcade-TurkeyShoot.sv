@@ -202,14 +202,14 @@ assign VIDEO_ARY = (!ar) ? 12'd241 : 12'd0;
 localparam CONF_STR = {
 	"A.TURKEYSHOOT;;",
 	"-;",
-	"O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
-	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
+	"O[9:8],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
+	"O[5:3],Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"-;",
-	"OA,Advance,Off,On;",
-	"OB,Auto Up,Off,On;",
-	"OC,High Score Reset,Off,On;",
+	"O[10],Advance,Off,On;",
+	"O[11],Auto Up,Off,On;",
+	"O[12],High Score Reset,Off,On;",
 	"-;",
-	"R0,Reset;",
+	"R[0],Reset;",
 	"J1,Fire,Grenade,Gobble,Start 1P,Start 2P,Coin;",
 	"jn,A,B,X,Start,Select,R;",
 	"V,v",`BUILD_DATE 
@@ -224,9 +224,9 @@ wire [24:0] ioctl_addr;
 wire [ 7:0] ioctl_dout;
 wire [15:0] ioctl_index;
 
-wire  [1:0] buttons;
-wire [31:0] status;
-wire [10:0] ps2_key;
+wire [  1:0] buttons;
+wire [127:0] status;
+wire [ 10:0] ps2_key;
 
 wire [15:0] joy;
 
@@ -330,17 +330,12 @@ always @(posedge clk_12) begin : gunHV
 	end
 end
 
-
 // AUDIO VIDEO
 wire hblank, vblank;
 wire hs, vs;
 
 wire [ 3:0] r,g,b,intensity;
 wire [ 7:0] ri,gi,bi;
-
-// 2 bits are swapped in these chips, necessary to fix color
-// wire [3:0] r_swap ={r[1], r[2], r[3], r[0]};
-// wire [3:0] b_swap ={b[1], b[2], b[3], b[0]};
 
 wire [7:0] color_lut[256] = '{
     8'd19, 8'd21, 8'd23,  8'd25,  8'd26,  8'd29,  8'd32,  8'd35,  8'd38,  8'd43,  8'd49,  8'd56,  8'd65,  8'd76,  8'd96,  8'd108,

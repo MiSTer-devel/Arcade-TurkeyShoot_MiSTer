@@ -11,3 +11,5 @@ set_global_assignment -name VHDL_FILE rtl/pia6821.vhd
 set_global_assignment -name VHDL_FILE rtl/tshoot_cmos_ram.vhd
 set_global_assignment -name VHDL_FILE rtl/tshoot_sound_board.vhd
 set_global_assignment -name VHDL_FILE rtl/williams2.vhd
+
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/lightgun.sv

@@ -200,7 +200,7 @@ wire [1:0] ar = status[9:8];
 assign VIDEO_ARX = (!ar) ? 12'd909 : (ar - 1'd1);
 assign VIDEO_ARY = (!ar) ? 12'd763 : 12'd0;
 
-`include "build_id.v" 
+`include "build_id.v"
 localparam CONF_STR = {
 	"A.TURKEYSHOOT;;",
 	"-;",
@@ -211,10 +211,14 @@ localparam CONF_STR = {
 	"O[11],Auto Up,Off,On;",
 	"O[12],High Score Reset,Off,On;",
 	"-;",
+	"O[14:13],LightGun,Disabled,Joy1,Mouse;",
+	"H1O[15],LightGun Btn,Joy,Mouse;",
+	"H1O[17:16],Crosshair,Small,Med,Big,None;",
+	"-;",
 	"R[0],Reset;",
 	"J1,Fire,Grenade,Gobble,Start 1P,Start 2P,Coin;",
 	"jn,A,B,X,Start,Select,R;",
-	"V,v",`BUILD_DATE 
+	"V,v",`BUILD_DATE
 };
 
 wire        forced_scandoubler;
@@ -231,6 +235,7 @@ wire [127:0] status;
 wire [ 10:0] ps2_key;
 
 wire [15:0] joy;
+wire [ 7:0] joy0_x,joy0_y,joy1_x,joy1_y;
 
 wire [21:0] gamma_bus;
 
@@ -242,7 +247,7 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 
 	.buttons(buttons),
 	.status(status),
-	.status_menumask({direct_video}),
+	.status_menumask({!gun_mode,direct_video}),
 
 	.forced_scandoubler(forced_scandoubler),
 	.gamma_bus(gamma_bus),
@@ -254,7 +259,8 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 	.ioctl_dout(ioctl_dout),
 	.ioctl_index(ioctl_index),
 
-	.joystick_0(joy)
+	.joystick_0(joy),
+	.joystick_l_analog_0({joy0_y, joy0_x})
 );
 
 ///////////////////////   CLOCKS   ///////////////////////////////
@@ -299,7 +305,7 @@ reg [5:0] gun_h, gun_v;
 
 always @(posedge clk_12) begin : gunHV
 	gun_update_r <= cnt_4ms;
-	
+
 	if ((gun_update_r == 1'b0) && (cnt_4ms == 1'b1)) begin
 		left_r  <= m_left;
 		right_r <= m_right;
@@ -331,6 +337,39 @@ always @(posedge clk_12) begin : gunHV
 		end
 	end
 end
+
+wire [1:0] gun_mode      = status[14:13];
+wire       gun_btn_mode  = status[15];
+wire [1:0] gun_crosshair = status[17:16];
+wire       gun_trigger;
+wire [2:0] gun_target;
+wire       gun_sensor;
+
+lightgun lightgun
+(
+	.CLK(clk_sys),
+	.RESET(reset),
+
+	.MOUSE(ps2_mouse),
+	.MOUSE_XY(&gun_mode),
+
+	.JOY_X(joy0_x),
+	.JOY_Y(joy0_y),
+	.JOY(joy[7:0]),
+
+	.HDE(~hblank),
+	.VDE(~vblank),
+	.CE_PIX(ce_pix),
+
+	.BTN_MODE(gun_btn_mode),
+	.SIZE(gun_crosshair),
+	.SENSOR_DELAY(34),
+
+	.TARGET(gun_target),
+	.SENSOR(gun_sensor),
+	.TRIGGER(gun_trigger)
+);
+
 
 // AUDIO VIDEO
 wire hblank, vblank;
@@ -364,6 +403,11 @@ always @(posedge clk_48) begin : rgbOutput
 	bi = ~| intensity ? 8'd0 : color_lut[{b, intensity}];
 end
 
+wire [7:0] rg, gg, bg;
+assign rg = (gun_mode & gun_target && (~&gun_crosshair)) ? 8'd255 : ri;
+assign gg = (gun_mode & gun_target && (~&gun_crosshair)) ? 8'd0   : gi;
+assign bg = (gun_mode & gun_target && (~&gun_crosshair)) ? 8'd0   : bi;
+
 reg ce_pix;
 always @(posedge clk_48) begin
 	reg [2:0] div;
@@ -371,19 +415,19 @@ always @(posedge clk_48) begin
 	ce_pix <= !div;
 end
 
-	arcade_video #(313,24,1) arcade_video
+arcade_video #(313,24,1) arcade_video
 (
-        .*,
+	.*,
 
-        .clk_video(clk_48),
+	.clk_video(clk_48),
 
-        .RGB_in({ri[7:0],gi[7:0],bi[7:0]}),
-        .HBlank(hblank),
-        .VBlank(vblank),
-        .HSync(~hs),
-        .VSync(~vs),
+	.RGB_in({rg[7:0],gg[7:0],bg[7:0]}),
+	.HBlank(hblank),
+	.VBlank(vblank),
+	.HSync(~hs),
+	.VSync(~vs),
 
-        .fx(status[5:3])
+	.fx(status[5:3])
 );
 
 wire [7:0] audio;
